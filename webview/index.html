@@ -1,0 +1,2846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABAP TechSpec Architect - Technical Document Generator</title>
+    <!-- Lucide Icons CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css">
+    <!-- Mammoth JS for client-side docx parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <!-- Marked JS for client-side markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+            /* Premium SAP Fiori Horizon Corporate Light Palette */
+            --sap-blue: #0064d2;
+            --sap-blue-hover: #0050ac;
+            --sap-blue-light: #f2f7fa;
+            --bg-app: #f5f6f8;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --border-color: #d3d7db;
+            --border-color-hover: #939ba2;
+            --text-primary: #1d2d3e;
+            --text-secondary: #556b82;
+            --text-muted: #8b9eb3;
+            
+            /* Semantic Colors (Fiori Horizon Standard) */
+            --color-success: #107e3e;
+            --color-success-bg: #e8f5ed;
+            --color-success-border: #a1dbb5;
+            --color-warning: #e09d00;
+            --color-warning-bg: #fff8e6;
+            --color-warning-border: #ffd680;
+            --color-danger: #bb0000;
+            --color-danger-bg: #ffe6e6;
+            --color-danger-border: #ff9999;
+
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 12px rgba(29, 45, 62, 0.05);
+            --shadow-lg: 0 12px 24px rgba(29, 45, 62, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scrollbars - Clean Modern Style */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        /* ================= MODERN HEADER LAYOUT ================= */
+        .app-header {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            z-index: 10;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-logo i {
+            font-size: 1.5rem;
+            color: var(--sap-blue);
+        }
+
+        .header-logo h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* ================= MAIN APPLICATION FRAME ================= */
+        .app-container {
+            display: grid;
+            grid-template-columns: 360px 1fr 1.1fr;
+            grid-template-rows: calc(100vh - 87px); /* 57px header + 30px footer = 87px */
+            height: calc(100vh - 87px);
+            max-height: calc(100vh - 87px);
+            overflow: hidden;
+            background-color: var(--bg-app);
+        }
+
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 320px 1fr;
+                grid-template-rows: auto 1fr;
+                height: auto;
+                overflow: auto;
+            }
+            .panel {
+                height: auto;
+                max-height: none;
+            }
+            .scrollable-content {
+                height: auto;
+                max-height: none;
+            }
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+            max-height: 100%;
+            border-right: 1px solid var(--border-color);
+            background: var(--bg-app);
+            overflow: hidden;
+        }
+
+        .panel:last-child {
+            border-right: none;
+        }
+
+        #export-preview-panel.fullscreen-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            max-height: 100vh;
+            z-index: 1000;
+            background: #ffffff;
+            border: none;
+        }
+
+        .panel-header {
+            padding: 0.85rem 1.25rem;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .panel-title i {
+            color: var(--sap-blue);
+        }
+
+        .scrollable-content {
+            flex: 1;
+            height: calc(100vh - 150px);
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: block;
+        }
+
+        .scrollable-content > * {
+            margin-bottom: 1.25rem;
+        }
+
+        .scrollable-content > *:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ================= MODERN CARDS ================= */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--border-color-hover);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title i {
+            color: var(--sap-blue);
+        }
+
+        /* Forms & Inputs */
+        .form-group {
+            margin-bottom: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .form-group label {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            transition: all 0.15s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--sap-blue);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(10, 110, 209, 0.12);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover {
+            background: #f8fafc;
+            border-color: var(--border-color-hover);
+            color: var(--text-primary);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: var(--sap-blue);
+            border-color: var(--sap-blue);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: var(--sap-blue-hover);
+            border-color: var(--sap-blue-hover);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(10, 110, 209, 0.2);
+        }
+
+        .btn-success {
+            background: var(--color-success);
+            border-color: var(--color-success);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+            border-color: #059669;
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-danger {
+            background: var(--color-danger-bg);
+            border-color: var(--color-danger-border);
+            color: var(--color-danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--color-danger);
+            border-color: var(--color-danger);
+            color: #ffffff;
+        }
+
+        /* Upload Area */
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            background: var(--bg-input);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .upload-zone:hover {
+            background: var(--sap-blue-light);
+            border-color: var(--sap-blue);
+        }
+
+        .upload-zone i {
+            font-size: 1.75rem;
+            color: var(--sap-blue);
+        }
+
+        .upload-zone span {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .file-list {
+            margin-top: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0.75rem;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 0.8rem;
+        }
+
+        .file-name {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-name i {
+            color: var(--sap-blue);
+        }
+
+        .file-remove {
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .file-remove:hover {
+            color: var(--color-danger);
+        }
+
+        /* Toggle Switch */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            border-radius: 20px;
+            transition: .2s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            transition: .2s;
+        }
+
+        input:checked + .slider {
+            background-color: var(--sap-blue);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* ================= INTERACTIVE WIZARD PANELS ================= */
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: 0.5rem;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            margin-top: 0.25rem;
+            accent-color: var(--sap-blue);
+            cursor: pointer;
+        }
+
+        .checklist-item-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .checklist-item-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .checklist-item-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .checklist-item-input {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            padding: 0.4rem 0.6rem;
+        }
+
+        .object-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            background: var(--bg-app);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-family: var(--font-mono);
+            font-weight: 500;
+            margin-right: 0.4rem;
+            margin-bottom: 0.4rem;
+            transition: all 0.15s ease;
+        }
+
+        .object-badge:hover {
+            border-color: var(--text-secondary);
+        }
+
+        .object-badge.table { background: var(--color-success-bg); color: var(--color-success); border-color: var(--color-success-border); }
+        .object-badge.class { background: #faf5ff; color: #7c3aed; border-color: #ddd6fe; }
+        .object-badge.report { background: var(--color-warning-bg); color: #d97706; border-color: var(--color-warning-border); }
+        .object-badge.structure { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+        .object-badge.badi { background: #fff1f2; color: #db2777; border-color: #fecdd3; }
+        .object-badge.transaction { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+        .object-badge.view { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 320px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            background: #ffffff;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            font-size: 0.82rem;
+            background: #ffffff;
+        }
+
+        .chat-msg {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            max-width: 85%;
+            line-height: 1.5;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chat-msg.assistant {
+            background: var(--bg-app);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border-color);
+        }
+
+        .chat-msg.user {
+            background: var(--sap-blue-light);
+            color: var(--text-primary);
+            border: 1px solid #bae0fc;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-input-area {
+            display: flex;
+            border-top: 1px solid var(--border-color);
+            background: #ffffff;
+            padding: 0.75rem;
+            gap: 0.5rem;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            border-radius: var(--radius-md);
+            outline: none;
+        }
+
+        .chat-input-area input:focus {
+            border-color: var(--sap-blue);
+            box-shadow: 0 0 0 3px rgba(0, 100, 210, 0.1);
+        }
+
+        /* ================= MODERN TABSTRIP CONTROL ================= */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: #ffffff;
+            padding: 0.5rem 1rem 0 1rem;
+        }
+
+        .tab {
+            padding: 0.6rem 1.25rem;
+            font-size: 0.82rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.15s ease;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            border-bottom-color: var(--sap-blue);
+            font-weight: 600;
+            color: var(--sap-blue);
+        }
+
+        /* ================= DOCUMENT CONTAINER LAYOUT ================= */
+        .panel-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .doc-split-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100%;
+            overflow: hidden;
+            background: #ffffff;
+            min-height: 0;
+        }
+
+        .doc-split {
+            display: block;
+            height: 100%;
+            overflow: hidden;
+            background: #ffffff;
+            min-height: 0;
+        }
+
+        @media (max-width: 900px) {
+            .doc-split-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+        }
+
+        .doc-editor-container, .doc-preview-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .doc-editor-container {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .doc-editor-container textarea {
+            flex: 1;
+            border: none;
+            background: #fafafa;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            resize: none;
+            padding: 1.25rem;
+            line-height: 1.5;
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .doc-preview-rendered {
+            flex: 1;
+            overflow: auto;
+            padding: 1.25rem;
+            background: #ffffff;
+            color: var(--text-primary);
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+
+        /* Markdown Rendering styles */
+        .doc-preview-rendered h1,
+        .doc-preview-rendered h2,
+        .doc-preview-rendered h3,
+        .doc-preview-rendered h4 {
+            color: var(--text-primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .doc-preview-rendered h1 { font-size: 1.35rem; border-bottom: 2px solid var(--sap-blue); padding-bottom: 0.25rem; }
+        .doc-preview-rendered h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.25rem; }
+        .doc-preview-rendered h3 { font-size: 1rem; }
+        .doc-preview-rendered h4 { font-size: 0.9rem; }
+
+        .doc-preview-rendered p {
+            margin-bottom: 1rem;
+        }
+
+        .doc-preview-rendered ul,
+        .doc-preview-rendered ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+
+        .doc-preview-rendered li {
+            margin-bottom: 0.25rem;
+        }
+
+        .doc-preview-rendered table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.25rem;
+            font-size: 0.8rem;
+        }
+
+        .doc-preview-rendered th,
+        .doc-preview-rendered td {
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+        }
+
+        .doc-preview-rendered th {
+            background: var(--sap-blue-light);
+            color: var(--sap-blue);
+            font-weight: 600;
+        }
+
+        .doc-preview-rendered tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .doc-preview-rendered code {
+            background: #f1f5f9;
+            padding: 0.15rem 0.35rem;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 0.85em;
+            color: #ef4444;
+        }
+
+        .doc-preview-rendered pre {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            margin-bottom: 1.25rem;
+        }
+
+        .doc-preview-rendered pre code {
+            background: transparent;
+            border: none;
+            padding: 0;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+        }
+
+        .doc-preview-rendered blockquote {
+            border-left: 4px solid var(--sap-blue);
+            background: var(--sap-blue-light);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+
+        /* ================= MODERN STATUS BAR / FOOTER ================= */
+        .app-footer {
+            background: #ffffff;
+            border-top: 1px solid var(--border-color);
+            padding: 0.4rem 1.5rem;
+            font-size: 0.78rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 30px;
+            color: var(--text-secondary);
+            box-shadow: 0 -1px 2px rgba(0,0,0,0.02);
+        }
+
+        .status-message {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        .status-message.success i { color: var(--color-success); }
+        .status-message.error i { color: var(--color-danger); }
+        .status-message.warning i { color: var(--color-warning); }
+
+        .status-sys-info {
+            display: flex;
+            gap: 1.25rem;
+            opacity: 0.8;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(10, 110, 209, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--sap-blue);
+            animation: spin 0.8s linear infinite;
+        }
+
+        .pulse-text {
+            font-size: 0.85rem;
+            color: var(--sap-blue);
+            font-weight: 600;
+        }
+
+        /* Toast Banner */
+        .toast {
+            position: fixed;
+            bottom: 40px;
+            right: 20px;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-md);
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            font-size: 0.8rem;
+            border-left: 4px solid var(--sap-blue);
+        }
+
+        .toast.success { border-left-color: var(--color-success); }
+        .toast.success i { color: var(--color-success); }
+        .toast.error { border-left-color: var(--color-danger); }
+        .toast.error i { color: var(--color-danger); }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= MODERN APP HEADER ================= -->
+    <header class="app-header">
+        <div class="header-logo">
+            <i class="lucide-cpu"></i>
+            <h1>ABAP TechSpec Architect</h1>
+        </div>
+        
+        <div class="header-actions">
+            <!-- Action triggers mapped to JS handlers -->
+            <button id="btn-run-analysis" class="btn btn-primary"><i class="lucide-play"></i> Run Analysis</button>
+            <button id="btn-generate-spec" class="btn btn-success"><i class="lucide-wand2"></i> Generate Document</button>
+            
+            <div style="width: 1px; height: 20px; background: var(--border-color); margin: 0 8px;"></div>
+            
+            <button id="btn-copy-doc" class="btn" title="Copy Markdown"><i class="lucide-copy"></i> Copy</button>
+            <button id="btn-download-md" class="btn" title="Download Markdown"><i class="lucide-download"></i> .MD</button>
+            <button id="btn-download-docx" class="btn" title="Export Word"><i class="lucide-file-text"></i> Export Word</button>
+            
+            <div style="width: 1px; height: 20px; background: var(--border-color); margin: 0 8px;"></div>
+            
+            <!-- Language Selector -->
+            <div class="switch-container" style="gap: 8px;">
+                <span id="lang-label" style="font-size: 0.78rem; font-weight: 600; color: var(--sap-blue)">FR Output</span>
+                <label class="switch">
+                    <input type="checkbox" id="lang-toggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- Update Notification Banner -->
+    <div id="update-banner" style="display: none; background: var(--color-warning-bg); border-bottom: 1px solid var(--color-warning-border); padding: 0.5rem 1.5rem; font-size: 0.8rem; align-items: center; justify-content: space-between; gap: 10px; z-index: 9;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="lucide-alert-circle" style="color: var(--color-warning);"></i>
+            <span id="update-banner-text" style="color: var(--text-primary); font-weight: 500;">New version available: v2.3</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="btn-view-notes" class="btn" style="padding: 2px 10px; font-size: 0.75rem; border-color: var(--color-warning-border); color: var(--text-primary); background: #ffffff;">
+                <i class="lucide-file-text" style="font-size: 0.75rem;"></i> Release Notes
+            </button>
+            <button id="btn-do-update" class="btn btn-primary" style="padding: 2px 10px; font-size: 0.75rem; background: var(--sap-blue); border-color: var(--sap-blue);">
+                <i class="lucide-download" style="font-size: 0.75rem;"></i> Update Now
+            </button>
+            <button id="btn-dismiss-update" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); margin-left: 6px; display: flex; align-items: center;"><i class="lucide-x" style="font-size: 0.85rem;"></i></button>
+        </div>
+    </div>
+
+    <!-- ================= APP WORKSPACE CONTAINER ================= -->
+    <div class="app-container">
+
+        <!-- ================= COLUMN 1: CONFIGURATION ================= -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <i class="lucide-settings"></i>
+                    <span>Selection Parameters</span>
+                </div>
+            </div>
+            
+            <div class="scrollable-content">
+                
+                <!-- LLM Config Card (Hidden in Webview) -->
+                <div class="card" style="display: none;">
+                    <div class="card-title">
+                        <span>LLM Configuration</span>
+                        <i class="lucide-key"></i>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ai-provider">AI Provider</label>
+                        <select id="ai-provider">
+                            <option value="gemini" selected>Google Gemini</option>
+                            <option value="openai">OpenAI (ChatGPT)</option>
+                            <option value="claude">Anthropic (Claude)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ai-model">AI Model</label>
+                        <select id="ai-model">
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ai-key">API Key</label>
+                        <input type="password" id="ai-key" placeholder="Enter API Token...">
+                    </div>
+                    
+                    <div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 6px;">
+                        <button id="btn-save-key" class="btn btn-primary" style="font-size: 0.78rem; padding: 4px 12px;">
+                            <i class="lucide-save"></i> Save Settings
+                        </button>
+                        <button id="btn-clear-key" class="btn btn-danger" style="padding: 4px 8px;">
+                            <i class="lucide-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GitLab Auto-Update Card (Hidden in Webview) -->
+                <div class="card" style="display: none;">
+                    <div class="card-title">
+                        <span>GitLab Auto-Update</span>
+                        <i class="lucide-refresh-cw"></i>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="update-gitlab-host">GitLab Host</label>
+                        <input type="text" id="update-gitlab-host" placeholder="https://gitlab.com" value="https://gitlab.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="update-project-id">Project ID / Path</label>
+                        <input type="text" id="update-project-id" placeholder="e.g. 123456 or owner/repo">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="update-branch">Branch</label>
+                        <input type="text" id="update-branch" placeholder="main" value="main">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="update-token">Private Token (optional)</label>
+                        <input type="password" id="update-token" placeholder="For private repos...">
+                    </div>
+                    
+                    <div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 6px; flex-wrap: wrap;">
+                        <button id="btn-save-update-config" class="btn btn-primary" style="font-size: 0.78rem; padding: 4px 12px;">
+                            <i class="lucide-save"></i> Save Settings
+                        </button>
+                        <button id="btn-check-updates" class="btn" style="font-size: 0.78rem; padding: 4px 12px;">
+                            <i class="lucide-search"></i> Check Update
+                        </button>
+                        <button id="btn-force-update" class="btn btn-success" style="font-size: 0.78rem; padding: 4px 12px;">
+                            <i class="lucide-download"></i> Force Update
+                        </button>
+                    </div>
+                </div>
+
+                <!-- VS Code Integration Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>VS Code Integration</span>
+                        <i class="lucide-box"></i>
+                    </div>
+                    <button id="btn-import-editor" class="btn btn-primary" style="width: 100%; font-size: 0.8rem; margin-top: 4px;">
+                        <i class="lucide-file-code"></i> Import Active Editor Code
+                    </button>
+                </div>
+
+                <!-- Functional Document Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>Functional Document</span>
+                        <i class="lucide-file-text"></i>
+                    </div>
+                    <div class="upload-zone" id="func-upload-zone">
+                        <i class="lucide-upload-cloud"></i>
+                        <span>Upload Functional Spec</span>
+                        <span style="font-size: 0.68rem; color: var(--text-muted);">.docx, .txt, .md supported</span>
+                        <input type="file" id="func-file-input" accept=".docx,.txt,.md" style="display: none;">
+                    </div>
+                    <div class="file-list" id="func-file-list">
+                        <!-- Uploaded functional spec details -->
+                    </div>
+                </div>
+
+                <!-- Developed ABAP Code Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>ABAP Source Code</span>
+                        <i class="lucide-code-2" style="color: var(--color-success)"></i>
+                    </div>
+                    <div class="upload-zone" id="abap-upload-zone">
+                        <i class="lucide-file-code" style="color: var(--color-success)"></i>
+                        <span>Upload ABAP Files</span>
+                        <span style="font-size: 0.68rem; color: var(--text-muted);">Attach developed codes</span>
+                        <input type="file" id="abap-file-input" accept=".abap,.txt" multiple style="display: none;">
+                    </div>
+                    <div class="file-list" id="abap-file-list" style="max-height: 140px; overflow-y: auto;">
+                        <!-- Uploaded files -->
+                    </div>
+                </div>
+
+                <!-- Technical Template Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>Document Template</span>
+                        <i class="lucide-layout-template"></i>
+                    </div>
+                    <div class="form-group" style="grid-template-columns: 1fr;">
+                        <select id="template-select" style="margin-bottom: 6px;">
+                            <option value="airbus-v0.2-fr" selected>Airbus NewERP STD V0.2 (FR)</option>
+                            <option value="airbus-v0.2-en">Airbus NewERP STD V0.2 (EN)</option>
+                            <option value="upload">Upload Template (.docx, .txt, .md)...</option>
+                            <option value="custom">Custom Markdown Template...</option>
+                        </select>
+                        <input type="file" id="template-file-input" accept=".docx,.txt,.md" style="display: none;">
+                        <div id="template-upload-status" style="font-size: 0.72rem; color: var(--color-success); font-weight: 500; display: none; margin-top: 4px; align-items: center; gap: 4px;">
+                            <i class="lucide-check-circle" style="font-size: 0.8rem;"></i>
+                            <span id="template-upload-name">template.docx</span>
+                        </div>
+                    </div>
+                    <div id="custom-template-group" style="display: none;">
+                        <textarea id="template-editor-raw" rows="6" placeholder="# Title ..."></textarea>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= COLUMN 2: INTERACTIVE ANALYSIS WIZARD ================= -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <i class="lucide-sparkles"></i>
+                    <span>Interactive Q&A Wizard</span>
+                </div>
+            </div>
+            
+            <div class="scrollable-content">
+
+                <!-- Gaps checklist -->
+                <div class="card" id="card-analysis-gaps">
+                    <div class="card-title">
+                        <span>Missing Technical Details</span>
+                        <i class="lucide-alert-circle" style="color: var(--color-danger)"></i>
+                    </div>
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 8px;">
+                        The system analyzed files and found the following functional gaps or missing parameters:
+                    </p>
+                    <div id="gaps-checklist-container">
+                        <div style="text-align: center; color: var(--text-muted); font-size: 0.78rem; padding: 1.5rem 0;">
+                            No files analyzed yet. Upload source files and click "Run Analysis".
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABAP Objects -->
+                <div class="card" id="card-objects-inventory">
+                    <div class="card-title">
+                        <span>Detected ABAP Objects</span>
+                        <i class="lucide-boxes" style="color: var(--sap-blue)"></i>
+                    </div>
+                    <div id="objects-badges-container" style="margin-bottom: 6px;">
+                        <!-- Badges -->
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="add-object-input" placeholder="e.g. Table ZTM_INVENT, Class ZCL_SHIPPING" style="flex: 1; padding: 0.4rem;">
+                            <button id="btn-add-object" class="btn btn-primary" style="padding: 2px 12px; font-size: 0.78rem;">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Prompts Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>Custom Prompts / Instructions</span>
+                        <i class="lucide-message-square"></i>
+                    </div>
+                    <textarea id="custom-prompt" rows="2" placeholder="e.g. 'Use ZCL_MESSAGES for validations', 'Include detailed exception descriptions'"></textarea>
+                </div>
+
+                <!-- AI Assistant Chat Container -->
+                <div class="chat-container">
+                    <div style="background: #f8fafc; border-bottom: 1px solid var(--border-color); padding: 0.5rem 1rem; font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+                        <span>AI Assistant Chat Q&A</span>
+                        <button id="btn-clear-chat" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i class="lucide-trash-2" style="font-size: 0.75rem;"></i></button>
+                    </div>
+                    <div class="chat-messages" id="chat-messages-container">
+                        <div class="chat-msg assistant">
+                            Welcome to the AI Assistant Chat. Once you execute the analysis, you can chat with me here to refine document specifics, add object definitions, or rewrite descriptions.
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-input" placeholder="Ask AI to refine details...">
+                        <button id="btn-chat-send" class="btn btn-icon" style="padding: 2px 8px;"><i class="lucide-send" style="font-size: 0.85rem;"></i></button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= COLUMN 3: EXPORT PREVIEW ================= -->
+        <div class="panel" id="export-preview-panel">
+            <!-- Tabstrip control -->
+            <div class="tabs" style="align-items: center;">
+                <div class="tab active" data-view="split">Split Editor</div>
+                <div class="tab" data-view="raw">Raw Markdown</div>
+                <div class="tab" data-view="preview">Formatted Preview</div>
+                <div style="flex: 1;"></div>
+                <span id="char-word-count" style="font-size: 0.72rem; color: var(--text-secondary); margin-right: 12px;">0 chars | 0 words</span>
+                <button id="btn-toggle-fullscreen" class="btn" style="font-size: 0.72rem; padding: 4px 8px; margin-bottom: 4px; border: 1px solid var(--border-color); background: #ffffff; border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-primary);" title="Toggle Fullscreen Panel">
+                    <i class="lucide-maximize-2" style="font-size: 0.75rem;"></i>
+                    <span id="fullscreen-btn-text">Fullscreen</span>
+                </button>
+            </div>
+
+            <div class="panel-content" style="background: #ffffff; border-top: 1px solid var(--border-color);">
+                <div class="doc-split-container" id="doc-views-wrapper">
+                    <!-- Editor -->
+                    <div class="doc-editor-container" id="view-editor-pane">
+                        <textarea id="doc-markdown-editor" placeholder="Generated technical specification will appear here. Editor is live-syncing..."></textarea>
+                    </div>
+                    <!-- HTML renderer -->
+                    <div class="doc-preview-container" id="view-preview-pane">
+                        <div class="doc-preview-rendered" id="doc-preview-rendered-content">
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); gap: 6px; text-align: center;">
+                                <i class="lucide-file-code" style="font-size: 2.5rem; opacity: 0.4;"></i>
+                                <span style="font-size: 0.8rem;">TDD not generated yet. Configure options and click "Run Analysis" and "Generate".</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= MODERN FOOTER ================= -->
+    <footer class="app-footer">
+        <div class="status-message" id="sap-status-message-field">
+            <i class="lucide-check-circle" style="color: var(--color-success);"></i>
+            <span>System ready.</span>
+        </div>
+        <div class="status-sys-info">
+            <span>Client-side Client</span>
+            <span>v2.2</span>
+        </div>
+    </footer>
+
+    <!-- Spinner Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="pulse-text" id="loading-status-text">Analyzing inputs...</div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div class="toast" id="toast-banner">
+        <i class="lucide-check-circle" id="toast-icon"></i>
+        <span id="toast-text">Toast initialized.</span>
+    </div>
+
+    <!-- ABAP Code View Modal -->
+    <div id="code-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; padding: 2rem; backdrop-filter: blur(2px);">
+        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 100%; max-width: 800px; display: flex; flex-direction: column; height: 80%; overflow: hidden; box-shadow: var(--shadow-lg);">
+            <div style="padding: 0.75rem 1.25rem; background: var(--bg-input); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+                <h3 id="code-modal-filename" style="font-size: 0.88rem; color: var(--sap-blue); font-weight: 600;">Code Preview</h3>
+                <button id="btn-close-code-modal" class="btn btn-icon" style="padding: 4px 8px; border-radius: 50%;"><i class="lucide-x"></i></button>
+            </div>
+            <div style="flex: 1; overflow: auto; padding: 1.25rem; background: #ffffff;">
+                <pre style="margin: 0; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-primary); white-space: pre-wrap;"><code id="code-modal-content"></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Release Notes Modal -->
+    <div id="notes-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1001; align-items: center; justify-content: center; padding: 2rem; backdrop-filter: blur(2px);">
+        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 100%; max-width: 500px; display: flex; flex-direction: column; max-height: 80%; overflow: hidden; box-shadow: var(--shadow-lg);">
+            <div style="padding: 0.75rem 1.25rem; background: var(--bg-input); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+                <h3 style="font-size: 0.88rem; color: var(--sap-blue); font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <i class="lucide-info"></i> Release Notes
+                </h3>
+                <button id="btn-close-notes-modal" class="btn btn-icon" style="padding: 4px 8px; border-radius: 50%;"><i class="lucide-x"></i></button>
+            </div>
+            <div style="flex: 1; overflow: auto; padding: 1.25rem; background: #ffffff; font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
+                <div style="font-weight: 600; margin-bottom: 8px;">Version: <span id="notes-version">v2.3</span></div>
+                <div id="notes-content" style="white-space: pre-wrap;"></div>
+            </div>
+            <div style="padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; background: var(--bg-input);">
+                <button id="btn-close-notes-ok" class="btn btn-primary" style="padding: 4px 16px;">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= CORE FRONTEND LOGIC SCRIPT ================= -->
+    <script>
+        // Acquire VS Code API
+        const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : null;
+        const pendingRequests = new Map();
+
+        // Safe localStorage wrapper to prevent crashes in sandboxed iframe contexts
+        const memoryStorage = {};
+        const safeStorage = {
+            getItem: (key) => {
+                try {
+                    return window.localStorage.getItem(key);
+                } catch (e) {
+                    console.warn("Storage blocked, fallback to memory:", e);
+                    return memoryStorage[key] || null;
+                }
+            },
+            setItem: (key, value) => {
+                try {
+                    window.localStorage.setItem(key, value);
+                } catch (e) {
+                    console.warn("Storage blocked, fallback to memory:", e);
+                    memoryStorage[key] = value;
+                }
+            },
+            removeItem: (key) => {
+                try {
+                    window.localStorage.removeItem(key);
+                } catch (e) {
+                    console.warn("Storage blocked, fallback to memory:", e);
+                    delete memoryStorage[key];
+                }
+            }
+        };
+
+        // Convert base64 to ArrayBuffer for Mammoth processing
+        function base64ToArrayBuffer(base64) {
+            var binaryString = atob(base64);
+            var bytes = new Uint8Array(binaryString.length);
+            for (var i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        window.addEventListener('message', event => {
+            const message = event.data;
+            if (message.command === 'llmResponse') {
+                const { requestId, text, success, error } = message;
+                if (pendingRequests.has(requestId)) {
+                    const { resolve, reject } = pendingRequests.get(requestId);
+                    pendingRequests.delete(requestId);
+                    if (success) {
+                        resolve(text);
+                    } else {
+                        reject(new Error(error || "Copilot call failed"));
+                    }
+                }
+            } else if (message.command === 'importActiveEditorResponse') {
+                const { name, content, success, error } = message;
+                if (success) {
+                    const exists = state.abapFiles.some(f => f.name === name);
+                    if (!exists) {
+                        state.abapFiles.push({
+                            name: name,
+                            content: content,
+                            size: content.length
+                        });
+                        renderAbapFileList();
+                        showToast(`Imported ${name} from VS Code.`, 'success');
+                    } else {
+                        showToast(`${name} is already in the ABAP files list.`, 'warning');
+                    }
+                } else {
+                    showToast(`Could not import from active editor: ${error}`, 'error');
+                }
+            } else if (message.command === 'funcFileSelected') {
+                const { name, content, base64, success, error } = message;
+                if (success) {
+                    if (base64) {
+                        const arrayBuffer = base64ToArrayBuffer(base64);
+                        mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                            .then(function(result) {
+                                state.funcFile = {
+                                    name: name,
+                                    content: result.value
+                                };
+                                renderFuncFileList();
+                                showToast('Functional document parsed successfully.', 'success');
+                            })
+                            .catch(function(err) {
+                                showToast('Error parsing Word document: ' + err.message, 'error');
+                            });
+                    } else {
+                        state.funcFile = {
+                            name: name,
+                            content: content
+                        };
+                        renderFuncFileList();
+                        showToast('Functional document loaded successfully.', 'success');
+                    }
+                } else {
+                    showToast(`Could not select file: ${error}`, 'error');
+                }
+            } else if (message.command === 'abapFilesSelected') {
+                const { files, success, error } = message;
+                if (success) {
+                    files.forEach(file => {
+                        const exists = state.abapFiles.some(f => f.name === file.name);
+                        if (!exists) {
+                            state.abapFiles.push(file);
+                        }
+                    });
+                    renderAbapFileList();
+                    showToast(`Imported ${files.length} ABAP files.`, 'success');
+                } else {
+                    showToast(`Could not select ABAP files: ${error}`, 'error');
+                }
+            } else if (message.command === 'templateFileSelected') {
+                const { name, content, base64, success, error } = message;
+                if (success) {
+                    processTemplateContent(name, content, base64);
+                } else {
+                    showToast(`Could not select template: ${error}`, 'error');
+                    resetTemplateToDefault();
+                }
+            }
+        });
+
+        // --- STATE MANAGEMENT ---
+        const state = {
+            apiKey: '',
+            provider: 'gemini',
+            model: 'gemini-1.5-flash',
+            funcFile: { name: '', content: '' },
+            abapFiles: [], // Array of { name: string, content: string, size: number }
+            objectsList: [], // Array of { name: string, type: string }
+            gapsList: [], // Array of { id: number, question: string, description: string, answer: '' }
+            chatHistory: [], // Array of { role: 'user'|'assistant', content: string }
+            currentTemplate: '',
+            uploadedTemplate: null, // Custom template uploaded by user
+            targetLanguage: 'FR', // 'FR' or 'EN'
+            generatedMarkdown: '',
+            version: '2.2',
+            gitlabConfig: {
+                host: 'https://gitlab.com',
+                projectId: '',
+                branch: 'main',
+                token: ''
+            },
+            updateAvailable: null
+        };
+
+        // --- DEFAULT AIRBUS ATLANTIC NEWERP TEMPLATE (MARKDOWN FORMAT) ---
+        const AIRBUS_TEMPLATE = `# DOMAINE D'APPLICATION : Manufacturing
+## Spécification Technique Détaillée de : [Titre de la Spécification]
+
+| Rôle | Date | Nom | Fonction |
+|---|---|---|---|
+| Approbateur | [Date Approbateur] | [Nom Approbateur] | [Fonction Approbateur] |
+| Auteur | [Date Auteur] | [Nom Auteur] | [Fonction Auteur] |
+
+---
+
+# 1. INTRODUCTION
+## 1.1. Objet
+[Objet description]
+
+## 1.2. Domaine d’application
+* **Organisation / Organizational Model**: [x] Core Model / [ ] Autre
+* **Divisions concernées**: Toutes / [Divisions]
+
+## 1.3. Besoin et justification du specifique
+[Besoin et justification]
+
+## 1.4. Typologie de la solution
+[ ] Transactionnel / [ ] Interface OUT / [ ] Impression / [ ] Interface IN / [ ] Reporting / [ ] Reprise de données / [ ] Programme / [ ] Enhancement / [ ] Autre
+
+## 1.5. Documents associés
+| Type de document | Références |
+|---|---|
+| [Type Doc] | [Ref Doc] |
+
+## 1.6. Terminologie
+| Terme, abréviation | Désignation |
+|---|---|
+| [Terme] | [Designation] |
+
+---
+
+# 2. Description de la solution
+## 2.1. Principe de fonctionnement
+[Principe de fonctionnement]
+
+## 2.2. Description détaillée
+### 2.2.1. Détail du dialogue / Transaction / Formulaire / Interface
+**Ecran xxx**
+| Bloc | Repère | Description | Attributs/Fonctionnalités |
+|---|---|---|---|
+| [Bloc] | [Repere] | [Desc] | [Attributs/Aide à la saisie] |
+
+**Paramètres E/S**
+| Paramètre | E/S | Obligatoire ? | Description |
+|---|---|---|---|
+| [Param] | [E/S] | [Oui/Non] | [Desc] |
+
+### 2.2.2. Detail du traitement
+[Detail du traitement]
+
+### 2.2.3. Règles de gestion
+| Id | Nom | Description | Feature / US |
+|---|---|---|---|
+| RG01 | [Nom RG] | [Desc RG] | [US] |
+
+## 2.3. Gestion des langues
+* Langue utilisée: [x] Français / [ ] Anglais / [ ] Autre
+| Champ | Langue | Désignation |
+|---|---|---|
+| [Champ] | [Langue] | [Designation] |
+
+| N° message | Langue | Désignation |
+|---|---|---|
+| [Msg ID] | [Langue] | [Designation] |
+
+## 2.4. Gestion des autorisations
+[Roles & Autorisations requises]
+
+## 2.5. Volumetrie
+[Volumetrie attendue]
+
+## 2.6. Cas de tests
+| Cas | Description | Résultat attendu |
+|---|---|---|
+| Test 01 | [Test Desc] | [Expected] |
+
+---
+
+# 3. CONCEPTION technique DETAILLEE
+## 3.1. Liste globale des objets techniques
+| Type | Nom | Description |
+|---|---|---|
+| [Type Object] | [Nom Object] | [Description] |
+
+## 3.2. Implémentation de l’objet technique [Nom Principal]
+### 3.2.1. Objets DDIC associés
+**Table [Nom Table]**
+* Libellé: [Libelle Table]
+* Classe de livraison: A
+* Groupe d’autorisations: [Auth]
+* Type de données: [Type]
+* Volumétrie attendue: [Vol]
+* Bufferisation: [Buff]
+
+| Zone | Clé | E.Données | Domaine | Table de contrôle | Format | Long | Désignation |
+|---|---|---|---|---|---|---|---|
+| [Champ] | [Key?] | [DataElement] | [Domain] | [CheckTable] | [Format] | [Len] | [Desc] |
+
+**Structure [Nom Structure]**
+* Libellé: [Libelle Structure]
+
+| Zone | E.Données | Domaine | Table de contrôle | Format | Long | Désignation |
+|---|---|---|---|---|---|---|---|
+| [Champ] | [DataElement] | [Domain] | [CheckTable] | [Format] | [Len] | [Desc] |
+
+### 3.2.2. Dynamisation du traitement
+[BAdI / Exit routing details]
+
+### 3.2.3. Logique de traitement
+* **Ecran de sélection / Dynpros**: [Selection details]
+* **Algorithme traitement**:
+  [Detailed pseudo-code or description]
+* **Structure fichier interface (entrée/sortie)**:
+  | Zone | E.Données | Type | Long. | Dec. | Description |
+  |---|---|---|---|---|---|
+  | [Zone] | [DataElement] | [Type] | [Len] | [Dec] | [Desc] |
+* **Log/report**: [SLG1, ALV, etc.]
+
+---
+
+# 4. Table des révisions
+| Version | Indice | Date | Auteur | Correction / Évolution / Description |
+|---|---|---|---|---|
+| V1.0 | X | [Date] | [Nom] | Version initiale |
+`;
+
+        const AIRBUS_ENGLISH_TEMPLATE = `# APPLICATION AREA: FI/CO
+## Technical Detailed Specification for: [Specification Title]
+
+| Role | Date | Name | Function |
+|---|---|---|---|
+| Approver | [Date] | [Name] | [Function] |
+| Author | [Date] | [Name] | [Function] |
+
+---
+
+# 1. INTRODUCTION
+## 1.1. Purpose
+This document constitutes the detailed functional and technical specification of [Topic].
+
+## 1.2. Application
+* **Organization / Organizational Model**: [x] Core Model / [ ] Other: ___________________________
+* **Regions**: [ ] FR [ ] CA [ ] US [ ] Other: ___________________________
+* **Affected divisions**: All / [Divisions]
+
+## 1.3. Need and justification of the specific
+[Need and justification]
+
+## 1.4. Type of solution
+[ ] Transactionnel / [ ] Interface OUT / [ ] Impression / [ ] Interface IN / [ ] Reporting / [ ] Data recovery / [ ] Program / [ ] Enhancement / [ ] Other: ________________________
+
+## 1.5. Related documents
+| Document Type | References |
+|---|---|
+| [Doc Type] | [Doc Ref] |
+
+## 1.6. Terminology
+| Term, abbreviation | Designation |
+|---|---|
+| [Term] | [Designation] |
+
+---
+
+# 2. Solution Description
+## 2.1. Working principle
+[Functional principle / process flow]
+
+## 2.2. Detailed Description
+### 2.2.1. Dialog / Transaction / Form / Interface Detail
+**Screen xxx**
+| Block | Benchmark | Description | Attributes/Features |
+|---|---|---|---|
+| [Block] | [Benchmark] | [Desc] | [Attributes/Features / Input Assistance] |
+
+**Buttons / Menus / Keys Mapping**
+| Button / Menu | Action | Keyboard Shortcut |
+|---|---|---|
+| [Button] | [Action] | [Shortcut] |
+
+**I/O settings**
+| Parameter | I/O | Mandatory? | Data Reading/Logging |
+|---|---|---|---|
+| [Param] | [I/O] | [Yes/No] | [Reading/Logging] |
+
+### 2.2.2. Treatment Detail
+[Treatment / logic steps detail]
+
+### 2.2.3. Management rules
+| Id | Name | Description | Feature / US |
+|---|---|---|---|
+| BR01 | [Rule Name] | [Rule Desc] | [US] |
+
+## 2.3. Language management
+* Language used for this processing: [x] English / [ ] Portuguese / [ ] Other: ________________________
+| Field | Language | Designation |
+|---|---|---|
+| [Field] | [Lang] | [Designation] |
+
+| N° message | Language | Designation |
+|---|---|---|
+| [Msg ID] | [Lang] | [Designation] |
+
+## 2.4. Permissions Management
+[Required Roles & Authorizations]
+
+## 2.5. Volumes
+[Expected volumes / performance data]
+
+## 2.6. Test cases
+| Case | Description | Expected result |
+|---|---|---|
+| Test 01 | [Test Desc] | [Expected] |
+
+---
+
+# 3. CONCEPTION technique DETAILLEE
+## 3.1. Global list of technical objects
+| Type | Name | Description |
+|---|---|---|
+| [Object Type] | [Object Name] | [Description] |
+
+## 3.2. Implementation of the technical object [Main Object Name]
+### 3.2.1. Related DDIC objects
+**Table [Table Name]**
+* Wording: [Table Wording]
+* Delivery class: A
+* Permission Group: [Auth]
+* Data Type: [Type]
+* Expected volume: [Vol]
+* Bufferisation: [Buff]
+* Function group: [FG]
+* Management transaction: [TCode]
+
+| Area | Key | E. Data | Domain | Control Table | Format | Long | Designation |
+|---|---|---|---|---|---|---|---|
+| [Field] | [Key?] | [DataElement] | [Domain] | [CheckTable] | [Format] | [Len] | [Desc] |
+
+**Structure [Structure Name]**
+* Wording: [Structure Wording]
+
+| Area | E. Data | Domain | Control Table | Format | Long | Designation |
+|---|---|---|---|---|---|---|---|
+| [Field] | [DataElement] | [Domain] | [CheckTable] | [Format] | [Len] | [Desc] |
+
+**Other objects** (authorization, search aid, blocking object, etc.):
+[Other objects detail]
+
+### 3.2.2. Boosting treatment
+[Boosting treatment details / Exit/BAdI dynamization table and MF or class handler]
+
+### 3.2.3. Processing logic (program, screen, function...)
+* **Selection Screen / Dynpros**: [Selection details]
+* **Treatment algorithm**:
+  [Detailed algorithm or pseudo-code]
+* **File structure interface (input/output)**:
+  Detail here the format of the I/O files (flat/hierarchical file, separator, encoding, headers, etc.). Also detail the structure of the file if it is not based on a DDIC structure.
+  | Area | E. Data | Type | Long. | Dec. | Description |
+  |---|---|---|---|---|---|
+  | [Field] | [DataElement] | [Type] | [Len] | [Dec] | [Desc] |
+* **Log/report** (SLG1, ALV ….):
+  [Log details]
+
+---
+
+# 4. Table of Revisions
+| Version | Index | Date | Creation / Evolution / Correction | Description and Rationale for Revisions |
+|---|---|---|---|---|
+| V1.0 | X | [Date] | Initial Release | Version initiale |
+`;
+
+        state.currentTemplate = AIRBUS_TEMPLATE;
+
+        // --- MODEL PROVIDER OPTIONS MAP ---
+        const MODELS = {
+            gemini: [
+                { value: 'gemini-1.5-flash', text: 'Gemini 1.5 Flash (Fast)' },
+                { value: 'gemini-1.5-pro', text: 'Gemini 1.5 Pro (High Reasoning)' },
+                { value: 'gemini-2.0-flash', text: 'Gemini 2.0 Flash (Latest Fast)' },
+                { value: 'gemini-2.5-flash', text: 'Gemini 2.5 Flash' },
+                { value: 'gemini-3.5-flash', text: 'Gemini 3.5 Flash (High)' },
+                { value: 'gemini-3.1-flash-lite-preview', text: 'Gemini 3.1 Flash Lite (High Quota)' },
+                { value: 'gemini-3.1-pro-preview', text: 'Gemini 3.1 Pro Preview' }
+            ],
+            openai: [
+                { value: 'gpt-4o', text: 'GPT-4o (Flagship)' },
+                { value: 'gpt-4o-mini', text: 'GPT-4o-Mini (Fast & Compact)' },
+                { value: 'o1-preview', text: 'o1-Preview (Advanced Logic)' },
+                { value: 'o1-mini', text: 'o1-Mini (Logic & Code)' }
+            ],
+            claude: [
+                { value: 'claude-3-5-sonnet-20241022', text: 'Claude 3.5 Sonnet (Recommended)' },
+                { value: 'claude-3-5-haiku-20241022', text: 'Claude 3.5 Haiku (Fast)' }
+            ]
+        };
+
+        // --- DOM ELEMENTS ---
+        const el = {
+            provider: document.getElementById('ai-provider'),
+            model: document.getElementById('ai-model'),
+            apiKey: document.getElementById('ai-key'),
+            btnSaveKey: document.getElementById('btn-save-key'),
+            btnClearKey: document.getElementById('btn-clear-key'),
+            
+            funcUploadZone: document.getElementById('func-upload-zone'),
+            funcFileInput: document.getElementById('func-file-input'),
+            funcFileList: document.getElementById('func-file-list'),
+            
+            abapUploadZone: document.getElementById('abap-upload-zone'),
+            abapFileInput: document.getElementById('abap-file-input'),
+            abapFileList: document.getElementById('abap-file-list'),
+            
+            templateSelect: document.getElementById('template-select'),
+            templateFileInput: document.getElementById('template-file-input'),
+            customTemplateGroup: document.getElementById('custom-template-group'),
+            templateEditorRaw: document.getElementById('template-editor-raw'),
+            langToggle: document.getElementById('lang-toggle'),
+            langLabel: document.getElementById('lang-label'),
+            
+            btnRunAnalysis: document.getElementById('btn-run-analysis'),
+            gapsChecklistContainer: document.getElementById('gaps-checklist-container'),
+            objectsBadgesContainer: document.getElementById('objects-badges-container'),
+            addObjectInput: document.getElementById('add-object-input'),
+            btnAddObject: document.getElementById('btn-add-object'),
+            customPrompt: document.getElementById('custom-prompt'),
+            
+            chatMessagesContainer: document.getElementById('chat-messages-container'),
+            chatInput: document.getElementById('chat-input'),
+            btnChatSend: document.getElementById('btn-chat-send'),
+            btnClearChat: document.getElementById('btn-clear-chat'),
+            
+            btnGenerateSpec: document.getElementById('btn-generate-spec'),
+            btnCopyDoc: document.getElementById('btn-copy-doc'),
+            btnDownloadMd: document.getElementById('btn-download-md'),
+            btnDownloadDocx: document.getElementById('btn-download-docx'),
+            charWordCount: document.getElementById('char-word-count'),
+            
+            docMarkdownEditor: document.getElementById('doc-markdown-editor'),
+            docPreviewRenderedContent: document.getElementById('doc-preview-rendered-content'),
+            docViewsWrapper: document.getElementById('doc-views-wrapper'),
+            
+            viewEditorPane: document.getElementById('view-editor-pane'),
+            viewPreviewPane: document.getElementById('view-preview-pane'),
+            tabs: document.querySelectorAll('.tabs .tab'),
+            
+            loadingOverlay: document.getElementById('loading-overlay'),
+            loadingStatusText: document.getElementById('loading-status-text'),
+            toastBanner: document.getElementById('toast-banner'),
+            toastText: document.getElementById('toast-text'),
+            toastIcon: document.getElementById('toast-icon'),
+            
+            codeModal: document.getElementById('code-modal'),
+            codeModalFilename: document.getElementById('code-modal-filename'),
+            codeModalContent: document.getElementById('code-modal-content'),
+            btnCloseCodeModal: document.getElementById('btn-close-code-modal')
+        };
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedConfig();
+            setupEventListeners();
+            updateCharWordCount();
+        });
+
+        // --- DYNAMIC MODELS POPULATION ---
+        function updateModelOptions() {
+            const provider = el.provider.value;
+            const models = MODELS[provider] || [];
+            
+            el.model.innerHTML = '';
+            models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.value;
+                opt.text = m.text;
+                el.model.appendChild(opt);
+            });
+            
+            const savedModel = safeStorage.getItem('abap_ai_model');
+            if (savedModel && models.some(m => m.value === savedModel)) {
+                state.model = savedModel;
+                el.model.value = savedModel;
+            } else if (models.length > 0) {
+                state.model = models[0].value;
+                el.model.value = models[0].value;
+            }
+        }
+
+        // --- LOAD/SAVE CONFIGURATION ---
+        function loadSavedConfig() {
+            const savedProvider = safeStorage.getItem('abap_ai_provider');
+            const savedKey = safeStorage.getItem('abap_ai_key');
+            
+            if (savedProvider) {
+                state.provider = savedProvider;
+                el.provider.value = savedProvider;
+            }
+            
+            updateModelOptions();
+            
+            if (savedKey) {
+                state.apiKey = savedKey;
+                el.apiKey.value = '••••••••••••••••••••••••••••••••';
+                showToast('Configurations loaded from local storage.', 'success');
+            }
+            
+            // GitLab Updater configuration
+            const savedGitLabHost = safeStorage.getItem('abap_updater_host');
+            const savedGitLabProject = safeStorage.getItem('abap_updater_project');
+            const savedGitLabBranch = safeStorage.getItem('abap_updater_branch');
+            const savedGitLabToken = safeStorage.getItem('abap_updater_token');
+            
+            if (savedGitLabHost) state.gitlabConfig.host = savedGitLabHost;
+            if (savedGitLabProject) state.gitlabConfig.projectId = savedGitLabProject;
+            if (savedGitLabBranch) state.gitlabConfig.branch = savedGitLabBranch;
+            
+            document.getElementById('update-gitlab-host').value = state.gitlabConfig.host;
+            document.getElementById('update-project-id').value = state.gitlabConfig.projectId;
+            document.getElementById('update-branch').value = state.gitlabConfig.branch;
+            
+            if (savedGitLabToken) {
+                state.gitlabConfig.token = savedGitLabToken;
+                document.getElementById('update-token').value = '••••••••••••••••••••••••••••••••';
+            }
+            
+            // Auto check for updates on startup (silently)
+            if (state.gitlabConfig.projectId) {
+                setTimeout(() => checkForUpdates(true), 2000);
+            }
+        }
+
+        function saveConfig() {
+            const provider = el.provider.value;
+            const model = el.model.value;
+            const keyInput = el.apiKey.value;
+            
+            state.provider = provider;
+            state.model = model;
+            safeStorage.setItem('abap_ai_provider', provider);
+            safeStorage.setItem('abap_ai_model', model);
+            
+            if (keyInput !== '••••••••••••••••••••••••••••••••') {
+                state.apiKey = keyInput;
+                safeStorage.setItem('abap_ai_key', keyInput);
+            }
+            
+            // Save GitLab update configuration
+            const updateHost = document.getElementById('update-gitlab-host').value.trim();
+            const updateProject = document.getElementById('update-project-id').value.trim();
+            const updateBranch = document.getElementById('update-branch').value.trim();
+            const updateTokenInput = document.getElementById('update-token').value;
+            
+            state.gitlabConfig.host = updateHost || 'https://gitlab.com';
+            state.gitlabConfig.projectId = updateProject;
+            state.gitlabConfig.branch = updateBranch || 'main';
+            
+            safeStorage.setItem('abap_updater_host', state.gitlabConfig.host);
+            safeStorage.setItem('abap_updater_project', state.gitlabConfig.projectId);
+            safeStorage.setItem('abap_updater_branch', state.gitlabConfig.branch);
+            
+            if (updateTokenInput !== '••••••••••••••••••••••••••••••••') {
+                state.gitlabConfig.token = updateTokenInput;
+                safeStorage.setItem('abap_updater_token', updateTokenInput);
+            }
+            
+            showToast('Configuration settings saved.', 'success');
+        }
+
+        function clearConfig() {
+            safeStorage.removeItem('abap_ai_provider');
+            safeStorage.removeItem('abap_ai_model');
+            safeStorage.removeItem('abap_ai_key');
+            state.apiKey = '';
+            el.apiKey.value = '';
+            
+            safeStorage.removeItem('abap_updater_host');
+            safeStorage.removeItem('abap_updater_project');
+            safeStorage.removeItem('abap_updater_branch');
+            safeStorage.removeItem('abap_updater_token');
+            state.gitlabConfig = { host: 'https://gitlab.com', projectId: '', branch: 'main', token: '' };
+            document.getElementById('update-gitlab-host').value = 'https://gitlab.com';
+            document.getElementById('update-project-id').value = '';
+            document.getElementById('update-branch').value = 'main';
+            document.getElementById('update-token').value = '';
+            
+            showToast('Configuration settings cleared.', 'success');
+        }
+
+        // --- FILE UPLOAD AND PARSING ---
+        function handleFuncFileUpload(file) {
+            if (!file) return;
+            
+            showLoading(true, 'Parsing Functional Document...');
+            const reader = new FileReader();
+            
+            if (file.name.endsWith('.docx')) {
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                    mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                        .then(function(result) {
+                            state.funcFile = {
+                                name: file.name,
+                                content: result.value
+                            };
+                            renderFuncFileList();
+                            showLoading(false);
+                            showToast('Functional document parsed successfully.', 'success');
+                        })
+                        .catch(function(err) {
+                            showLoading(false);
+                            showToast('Error parsing Word document: ' + err.message, 'error');
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.onload = function(e) {
+                    state.funcFile = {
+                        name: file.name,
+                        content: e.target.result
+                    };
+                    renderFuncFileList();
+                    showLoading(false);
+                    showToast('Functional document parsed successfully.', 'success');
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function handleAbapFilesUpload(files) {
+            if (!files.length) return;
+            
+            let filesRead = 0;
+            showLoading(true, 'Reading ABAP source files...');
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const exists = state.abapFiles.some(f => f.name === file.name);
+                    if (!exists) {
+                        state.abapFiles.push({
+                            name: file.name,
+                            content: e.target.result,
+                            size: file.size
+                        });
+                    }
+                    filesRead++;
+                    if (filesRead === files.length) {
+                        renderAbapFileList();
+                        showLoading(false);
+                        showToast(`Loaded ${files.length} ABAP files.`, 'success');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function renderFuncFileList() {
+            el.funcFileList.innerHTML = '';
+            if (!state.funcFile.name) return;
+            
+            const div = document.createElement('div');
+            div.className = 'file-item';
+            div.innerHTML = `
+                <span class="file-name" title="${state.funcFile.name}">
+                    <i class="lucide-file-text"></i>
+                    <span>${state.funcFile.name}</span>
+                </span>
+                <i class="lucide-trash file-remove" id="btn-remove-func"></i>
+            `;
+            el.funcFileList.appendChild(div);
+            
+            document.getElementById('btn-remove-func').addEventListener('click', () => {
+                state.funcFile = { name: '', content: '' };
+                renderFuncFileList();
+                showToast('Functional document removed.', 'success');
+            });
+        }
+
+        function renderAbapFileList() {
+            el.abapFileList.innerHTML = '';
+            if (state.abapFiles.length === 0) return;
+            
+            state.abapFiles.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerHTML = `
+                    <span class="file-name" title="${file.name}" style="cursor: pointer;" onclick="previewAbapFile(${index})">
+                        <i class="lucide-file-code" style="color: var(--sap-green)"></i>
+                        <span style="text-decoration: underline;">${file.name}</span>
+                        <span style="color: var(--text-secondary); font-size: 0.7rem;">(${(file.size / 1024).toFixed(1)} KB)</span>
+                    </span>
+                    <i class="lucide-trash file-remove" onclick="removeAbapFile(${index})"></i>
+                `;
+                el.abapFileList.appendChild(div);
+            });
+        }
+
+        window.removeAbapFile = function(index) {
+            state.abapFiles.splice(index, 1);
+            renderAbapFileList();
+            showToast('ABAP file removed.', 'success');
+        };
+
+        window.previewAbapFile = function(index) {
+            const file = state.abapFiles[index];
+            el.codeModalFilename.innerText = file.name;
+            el.codeModalContent.innerText = file.content;
+            el.codeModal.style.display = 'flex';
+        };
+
+        function handleTemplateFileUpload(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            if (file.name.endsWith('.docx')) {
+                reader.onload = function(e) {
+                    processTemplateContent(file.name, e.target.result, null);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.onload = function(e) {
+                    processTemplateContent(file.name, e.target.result, null);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function processTemplateContent(name, content, base64) {
+            showLoading(true, 'Parsing Template Document...');
+            if (name.endsWith('.docx')) {
+                let arrayBuffer;
+                try {
+                    arrayBuffer = base64 ? base64ToArrayBuffer(base64) : content;
+                } catch (err) {
+                    showLoading(false);
+                    showToast('Error converting template: ' + err.message, 'error');
+                    resetTemplateToDefault();
+                    return;
+                }
+                mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                    .then(function(result) {
+                        state.uploadedTemplate = result.value;
+                        state.currentTemplate = result.value;
+                        el.templateEditorRaw.value = result.value;
+                        
+                        document.getElementById('template-upload-name').innerText = name;
+                        document.getElementById('template-upload-status').style.display = 'flex';
+                        el.customTemplateGroup.style.display = 'block';
+                        
+                        showLoading(false);
+                        showToast('Template document uploaded & parsed successfully.', 'success');
+                    })
+                    .catch(function(err) {
+                        showLoading(false);
+                        showToast('Error parsing Word document: ' + err.message, 'error');
+                        resetTemplateToDefault();
+                    });
+            } else {
+                state.uploadedTemplate = content;
+                state.currentTemplate = content;
+                el.templateEditorRaw.value = content;
+                
+                document.getElementById('template-upload-name').innerText = name;
+                document.getElementById('template-upload-status').style.display = 'flex';
+                el.customTemplateGroup.style.display = 'block';
+                
+                showLoading(false);
+                showToast('Template document uploaded successfully.', 'success');
+            }
+        }
+        
+        function resetTemplateToDefault() {
+            el.templateSelect.value = state.targetLanguage === 'FR' ? 'airbus-v0.2-fr' : 'airbus-v0.2-en';
+            updateTemplateText();
+        }
+
+        function updateTemplateText() {
+            const val = el.templateSelect.value;
+            if (val === 'airbus-v0.2-fr') {
+                state.currentTemplate = AIRBUS_TEMPLATE;
+                el.customTemplateGroup.style.display = 'none';
+                document.getElementById('template-upload-status').style.display = 'none';
+            } else if (val === 'airbus-v0.2-en') {
+                state.currentTemplate = AIRBUS_ENGLISH_TEMPLATE;
+                el.customTemplateGroup.style.display = 'none';
+                document.getElementById('template-upload-status').style.display = 'none';
+            } else if (val === 'upload') {
+                if (state.uploadedTemplate) {
+                    state.currentTemplate = state.uploadedTemplate;
+                    document.getElementById('template-upload-status').style.display = 'flex';
+                    el.customTemplateGroup.style.display = 'block';
+                } else {
+                    el.templateFileInput.click();
+                }
+            } else if (val === 'custom') {
+                el.customTemplateGroup.style.display = 'block';
+                document.getElementById('template-upload-status').style.display = 'none';
+                state.currentTemplate = el.templateEditorRaw.value || '# Custom Template';
+            }
+        }
+
+        // --- CALL LLM APIS VIA COPILOT BRIDGE ---
+        async function callLLM(prompt, isJSON = false) {
+            if (!vscode) {
+                throw new Error("VS Code integration is not active. Running in standalone mode.");
+            }
+            
+            return new Promise((resolve, reject) => {
+                const requestId = Math.random().toString(36).substring(2, 11);
+                pendingRequests.set(requestId, { resolve, reject });
+                
+                vscode.postMessage({
+                    command: 'callLLM',
+                    prompt: prompt,
+                    isJSON: isJSON,
+                    requestId: requestId
+                });
+            });
+        }
+
+        // --- WIZARD: ANALYZE INPUTS ---
+        async function runInputsAnalysis() {
+            if (!state.funcFile.content && state.abapFiles.length === 0 && !el.customPrompt.value.trim()) {
+                showToast('Please provide at least one input (Functional Doc, ABAP Code, or Custom Prompt) to analyze.', 'error');
+                return;
+            }
+            
+            showLoading(true, 'Analyzing inputs for technical objects and gaps...');
+            
+            let abapCodeContext = '';
+            if (state.abapFiles.length > 0) {
+                abapCodeContext = '\n\nHere are the developed ABAP source codes:\n' + 
+                    state.abapFiles.map(f => `--- File: ${f.name} ---\n${f.content}`).join('\n\n');
+            }
+            
+            const funcContent = state.funcFile.content ? state.funcFile.content : 'Not provided (No functional document is available. Rely solely on ABAP code and developer prompts).';
+            
+            const analysisPrompt = `
+You are an expert SAP Technical Lead. Analyze the following Functional Requirements Document and optional developed ABAP source files.
+Compare them against the target document template structure to identify:
+1. Gaps or missing details required to fully construct the detailed technical specification. These could be transport request numbers, specific tables, message IDs, organizational unit details, security roles, boundary values, error scenarios, etc.
+2. The list of technical ABAP objects to be created or modified (e.g. Tables, Structures, Classes, Methods, Reports, BAdIs, Enhancements, Dynpros).
+
+Functional Document content:
+"""
+${funcContent}
+"""
+${abapCodeContext}
+
+Target Template Structure:
+"""
+${state.currentTemplate}
+"""
+
+Please respond EXACTLY in JSON format with the following keys. Do not include markdown code block formatting (like \`\`\`json) outside the JSON text.
+{
+  "gaps": [
+    {
+      "id": 1,
+      "question": "Short question heading",
+      "description": "More details explaining why this information is missing or needed"
+    }
+  ],
+  "objects": [
+    {
+      "name": "Object Name (e.g., ZCL_MY_CLASS or ZTM_PO_TABLE)",
+      "type": "Class | Table | Structure | Report | BAdI | Transaction | Function Module | View"
+    }
+  ]
+}
+`;
+
+            try {
+                const responseText = await callLLM(analysisPrompt, true);
+                
+                let cleanText = responseText.trim();
+                if (cleanText.startsWith('```json')) {
+                    cleanText = cleanText.substring(7);
+                }
+                if (cleanText.endsWith('```')) {
+                    cleanText = cleanText.substring(0, cleanText.length - 3);
+                }
+                
+                const results = JSON.parse(cleanText);
+                state.gapsList = results.gaps.map(g => ({ ...g, answer: '' }));
+                state.objectsList = results.objects;
+                
+                renderGapsChecklist();
+                renderObjectsBadges();
+                
+                appendChatMessage('assistant', `Analysis completed! I found **${state.gapsList.length} technical details** that might be missing and detected **${state.objectsList.length} ABAP objects**. Please fill out the details in the checklist and add any additional objects before generating the document.`);
+                showLoading(false);
+                showToast('Analysis completed successfully.', 'success');
+                
+            } catch (err) {
+                showLoading(false);
+                console.error(err);
+                showToast('Analysis failed: ' + err.message, 'error');
+            }
+        }
+
+        function renderGapsChecklist() {
+            el.gapsChecklistContainer.innerHTML = '';
+            
+            if (state.gapsList.length === 0) {
+                el.gapsChecklistContainer.innerHTML = `
+                    <div style="text-align: center; color: var(--color-success); font-size: 0.8rem; padding: 1.5rem 0;">
+                        <i class="lucide-check-circle" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block; margin-left: auto; margin-right: auto;"></i>
+                        No major gaps detected! Ready to generate.
+                    </div>
+                `;
+                return;
+            }
+            
+            state.gapsList.forEach((gap, index) => {
+                const item = document.createElement('div');
+                item.className = 'checklist-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="gap-chk-${gap.id}" ${gap.answer ? 'checked' : ''} disabled>
+                    <div class="checklist-item-content">
+                        <span class="checklist-item-title">${gap.question}</span>
+                        <span class="checklist-item-desc">${gap.description}</span>
+                        <input type="text" class="checklist-item-input" placeholder="Type answer here..." value="${gap.answer || ''}" onchange="updateGapAnswer(${index}, this.value)">
+                    </div>
+                `;
+                el.gapsChecklistContainer.appendChild(item);
+            });
+        }
+
+        window.updateGapAnswer = function(index, value) {
+            state.gapsList[index].answer = value;
+            const checkbox = document.getElementById(`gap-chk-${state.gapsList[index].id}`);
+            if (checkbox) {
+                checkbox.checked = !!value;
+            }
+        };
+
+        function renderObjectsBadges() {
+            el.objectsBadgesContainer.innerHTML = '';
+            
+            if (state.objectsList.length === 0) {
+                el.objectsBadgesContainer.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-muted)">No objects detected.</span>';
+                return;
+            }
+            
+            state.objectsList.forEach((obj, index) => {
+                const typeClass = (obj.type || '').toLowerCase();
+                const badge = document.createElement('span');
+                badge.className = `object-badge ${typeClass}`;
+                badge.innerHTML = `
+                    <span>${obj.type ? obj.type + ': ' : ''}${obj.name}</span>
+                    <i class="lucide-x" style="cursor: pointer; font-size: 0.7rem;" onclick="removeObject(${index})"></i>
+                `;
+                el.objectsBadgesContainer.appendChild(badge);
+            });
+        }
+
+        window.removeObject = function(index) {
+            state.objectsList.splice(index, 1);
+            renderObjectsBadges();
+        };
+
+        el.btnAddObject.addEventListener('click', () => {
+            const val = el.addObjectInput.value.trim();
+            if (!val) return;
+            
+            let type = 'Class';
+            let name = val;
+            
+            const parts = val.split(' ');
+            if (parts.length > 1) {
+                const first = parts[0].toLowerCase();
+                if (['table', 'structure', 'class', 'report', 'badi', 'transaction', 'view'].includes(first)) {
+                    type = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+                    name = parts.slice(1).join(' ');
+                }
+            }
+            
+            state.objectsList.push({ name, type });
+            renderObjectsBadges();
+            el.addObjectInput.value = '';
+        });
+
+        // --- CHAT INTERACTION ---
+        function appendChatMessage(role, content) {
+            state.chatHistory.push({ role, content });
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-msg ${role}`;
+            
+            let formatted = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            formatted = formatted.replace(/\n/g, '<br>');
+            msgDiv.innerHTML = formatted;
+            
+            el.chatMessagesContainer.appendChild(msgDiv);
+            el.chatMessagesContainer.scrollTop = el.chatMessagesContainer.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const text = el.chatInput.value.trim();
+            if (!text) return;
+            
+            appendChatMessage('user', text);
+            el.chatInput.value = '';
+            
+            showLoading(true, 'AI is processing...');
+            
+            const chatPrompt = `
+You are an ABAP TechSpec Architect AI Assistant.
+The user is working on creating a Technical Design Document for a functional requirement.
+
+Here is the context:
+- Functional Spec: "${state.funcFile.content ? state.funcFile.content.substring(0, 1500) + '...' : 'None'}"
+- ABAP code files uploaded: ${state.abapFiles.length} files.
+- Current Objects: ${JSON.stringify(state.objectsList)}
+- Answered details: ${JSON.stringify(state.gapsList.filter(g => g.answer))}
+- Custom user guidelines: "${el.customPrompt.value}"
+
+Here is the chat history:
+${state.chatHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+
+Analyze the user's latest query and answer it clearly.
+If the user asks you to add an object, suggest an answer, or change something in the plan, describe the changes. Keep your answer brief and professional.
+`;
+
+            try {
+                const responseText = await callLLM(chatPrompt);
+                appendChatMessage('assistant', responseText);
+                showLoading(false);
+            } catch (err) {
+                showLoading(false);
+                appendChatMessage('assistant', `Error: ${err.message}`);
+            }
+        }
+
+        el.btnClearChat.addEventListener('click', () => {
+            state.chatHistory = [];
+            el.chatMessagesContainer.innerHTML = '';
+            appendChatMessage('assistant', 'Chat history cleared.');
+        });
+
+        // --- TECHNICAL DOCUMENT GENERATION ---
+        async function generateTechnicalDocument() {
+            if (!state.funcFile.content && state.abapFiles.length === 0 && !el.customPrompt.value.trim()) {
+                showToast('Please provide at least one input (Functional Doc, ABAP Code, or Custom Prompt) to generate.', 'error');
+                return;
+            }
+            
+            showLoading(true, 'Generating Technical Specification...');
+            
+            let abapCodeContext = '';
+            if (state.abapFiles.length > 0) {
+                abapCodeContext = '\n\nHere are the developed ABAP source codes to analyze and document in detail:\n' + 
+                    state.abapFiles.map(f => `--- File: ${f.name} ---\n${f.content}`).join('\n\n');
+            }
+            
+            const filledAnswers = state.gapsList
+                .filter(g => g.answer)
+                .map(g => `- Question: ${g.question}\n  Answer: ${g.answer}`)
+                .join('\n');
+                
+            const languageLabel = state.targetLanguage === 'FR' ? 'French (Français)' : 'English (Anglais)';
+            
+            const funcContent = state.funcFile.content ? state.funcFile.content : 'Not provided (No functional document is available. Reconstruct functional logic and specifications directly from the developed ABAP code and developer prompts).';
+            
+            const synthesisPrompt = `
+You are an expert ABAP Technical Architect writing a Technical Design Document (Spécification Technique Détaillée) for Airbus Atlantic / Sopra Steria.
+
+Target Generation Language: Write the entire document in **${languageLabel}**.
+Keep the structural headings and layout exactly as specified in the template below.
+
+Here are the inputs:
+1. Functional Specification:
+"""
+${funcContent}
+"""
+
+2. Finalized list of ABAP objects developed / to be developed:
+${JSON.stringify(state.objectsList)}
+
+3. Developed ABAP Source Code (extract details like parameters, local types, logic, DB updates from this code):
+${abapCodeContext}
+
+4. Missing details filled in by the developer:
+${filledAnswers || 'None provided.'}
+
+5. Custom instructions/prompts from developer:
+"${el.customPrompt.value || 'None'}"
+
+6. Target Document Layout Template:
+"""
+${state.currentTemplate}
+"""
+
+Instructions:
+- Write a highly complete, professional, production-grade technical design document.
+- DO NOT use placeholders like "[TBD]" or "..." unless it is a form value. Extract actual information from the ABAP source code and functional text.
+- Under "CONCEPTION technique DETAILLEE" -> "Implémentation de l’objet technique", document each ABAP object listed (especially the database tables, structures, reports, classes, and exit logic).
+- Detail the exact processing logic, key validation rules, error handling, message IDs, and select-options parameters.
+- Provide a robust "Cas de tests" (Test cases) table detailing test cases with step-by-step descriptions and expected results.
+- Output ONLY the Markdown document. No preambles or chat messages before the Markdown text.
+`;
+
+            try {
+                const docMarkdown = await callLLM(synthesisPrompt);
+                state.generatedMarkdown = docMarkdown;
+                
+                el.docMarkdownEditor.value = docMarkdown;
+                updatePreviewPane(docMarkdown);
+                
+                showLoading(false);
+                showToast('Technical Specification generated successfully!', 'success');
+                switchTab('preview');
+                
+            } catch (err) {
+                showLoading(false);
+                console.error(err);
+                showToast('Generation failed: ' + err.message, 'error');
+            }
+        }
+
+        function updatePreviewPane(mdText) {
+            if (!mdText) {
+                el.docPreviewRenderedContent.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); gap: 6px; text-align: center;">
+                        <i class="lucide-file-code" style="font-size: 2.5rem; opacity: 0.4;"></i>
+                        <span style="font-size: 0.8rem;">TDD not generated yet. Configure options and click "Run Analysis" and "Generate".</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            const htmlContent = marked.parse(mdText);
+            el.docPreviewRenderedContent.innerHTML = htmlContent;
+            updateCharWordCount();
+        }
+
+        function updateCharWordCount() {
+            const val = el.docMarkdownEditor.value;
+            const chars = val.length;
+            const words = val.trim() === '' ? 0 : val.trim().split(/\s+/).length;
+            el.charWordCount.innerText = `${chars.toLocaleString()} chars | ${words.toLocaleString()} words`;
+        }
+
+        // --- EXPORT TO WORD / MARKDOWN ---
+        // Generates self-contained document compatibility XHTML for Word download
+        function copyDocToClipboard() {
+            const md = el.docMarkdownEditor.value;
+            if (!md) {
+                showToast('Nothing to copy!', 'error');
+                return;
+            }
+            
+            navigator.clipboard.writeText(md).then(() => {
+                showToast('Markdown copied to clipboard!', 'success');
+            }).catch(err => {
+                showToast('Copy failed: ' + err.message, 'error');
+            });
+        }
+
+        function downloadMarkdownFile() {
+            const md = el.docMarkdownEditor.value;
+            if (!md) {
+                showToast('No document generated to download!', 'error');
+                return;
+            }
+            
+            const filename = (state.funcFile.name ? state.funcFile.name.replace(/\.[^/.]+$/, "") : "Technical_Specification") + "_TSD.md";
+            const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+            const link = document.createElement("a");
+            
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Markdown file downloaded.', 'success');
+        }
+
+        function downloadWordDoc() {
+            const md = el.docMarkdownEditor.value;
+            if (!md) {
+                showToast('No document generated to download!', 'error');
+                return;
+            }
+            
+            const htmlContent = marked.parse(md);
+            const styles = `
+                <style>
+                    body { font-family: 'Segoe UI', Arial, sans-serif; color: #333333; line-height: 1.5; }
+                    h1 { font-size: 20pt; color: #003366; font-weight: bold; border-bottom: 2px solid #003366; padding-bottom: 5px; margin-top: 24px; }
+                    h2 { font-size: 15pt; color: #004c99; font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-top: 18px; }
+                    h3 { font-size: 12pt; color: #333; font-weight: bold; margin-top: 12px; }
+                    p { font-size: 10.5pt; margin-bottom: 10px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }
+                    th, td { border: 1px solid #999999; padding: 6px 8px; font-size: 9.5pt; text-align: left; }
+                    th { background-color: #f2f2f2; font-weight: bold; color: #003366; }
+                    pre { background-color: #f8f9fa; border: 1px solid #dddddd; padding: 10px; font-family: 'Consolas', monospace; font-size: 9pt; }
+                    code { font-family: 'Consolas', monospace; font-size: 9.5pt; background-color: #f8f9fa; padding: 1px 3px; border-radius: 3px; color: #d63384; }
+                    blockquote { border-left: 3px solid #004c99; padding-left: 10px; color: #555; background: #f9f9f9; margin-left: 0; }
+                </style>
+            `;
+            
+            const wordDocumentText = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <title>Technical Specification</title>
+                    <!--[if gte mso 9]>
+                    <xml>
+                        <w:WordDocument>
+                            <w:View>Print</w:View>
+                            <w:Zoom>100</w:Zoom>
+                            <w:DoNotOptimizeForBrowser/>
+                        </w:WordDocument>
+                    </xml>
+                    <![endif]-->
+                    ${styles}
+                </head>
+                <body>
+                    ${htmlContent}
+                </body>
+                </html>
+            `;
+            
+            const filename = (state.funcFile.name ? state.funcFile.name.replace(/\.[^/.]+$/, "") : "Technical_Specification") + "_TSD.doc";
+            const blob = new Blob(['\ufeff' + wordDocumentText], {
+                type: 'application/msword;charset=utf-8'
+            });
+            
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Word Document downloaded successfully.', 'success');
+        }
+
+        // --- UTILITIES & UI CONTROLS ---
+        function showLoading(show, statusMsg = 'Loading...') {
+            const statusField = document.getElementById('sap-status-message-field');
+            if (show) {
+                el.loadingStatusText.innerText = statusMsg;
+                el.loadingOverlay.style.display = 'flex';
+                
+                if (statusField) {
+                    statusField.className = 'status-message warning';
+                    statusField.innerHTML = `<i class="lucide-refresh-cw" style="color: var(--color-warning); animation: spin 1s linear infinite;"></i> <span>${statusMsg}</span>`;
+                }
+            } else {
+                el.loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function showToast(text, type = 'success') {
+            el.toastText.innerText = text;
+            el.toastBanner.className = `toast ${type}`;
+            
+            let iconClass = 'lucide-check-circle';
+            let iconColor = 'var(--color-success)';
+            if (type !== 'success') {
+                iconClass = 'lucide-alert-triangle';
+                iconColor = 'var(--color-danger)';
+            }
+            
+            el.toastIcon.className = iconClass;
+            el.toastBanner.style.display = 'flex';
+            
+            const statusField = document.getElementById('sap-status-message-field');
+            if (statusField) {
+                statusField.className = `status-message ${type}`;
+                statusField.innerHTML = `<i class="${iconClass}" style="color: ${iconColor}"></i> <span>${text}</span>`;
+            }
+            
+            setTimeout(() => {
+                el.toastBanner.style.display = 'none';
+            }, 4000);
+        }
+
+        function switchTab(viewType) {
+            el.tabs.forEach(tab => {
+                if (tab.getAttribute('data-view') === viewType) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            if (viewType === 'split') {
+                el.docViewsWrapper.className = 'doc-split-container';
+                el.viewEditorPane.style.display = 'flex';
+                el.viewPreviewPane.style.display = 'flex';
+            } else if (viewType === 'raw') {
+                el.docViewsWrapper.className = 'doc-split';
+                el.viewEditorPane.style.display = 'flex';
+                el.viewPreviewPane.style.display = 'none';
+            } else if (viewType === 'preview') {
+                el.docViewsWrapper.className = 'doc-split';
+                el.viewEditorPane.style.display = 'none';
+                el.viewPreviewPane.style.display = 'flex';
+            }
+        }
+
+        // --- AUTO-UPDATE MODULE (Disabled in Webview) ---
+        async function checkForUpdates(silent = true) {
+            if (!silent) showToast('Auto-updates are disabled inside VS Code.', 'warning');
+            return;
+        }
+        async function performUpdate() {
+            showToast('Auto-updates are disabled inside VS Code. Please update the extension via VSIX or the Marketplace.', 'warning');
+        }
+
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            el.btnSaveKey.addEventListener('click', saveConfig);
+            el.btnClearKey.addEventListener('click', clearConfig);
+            
+            el.provider.addEventListener('change', () => {
+                updateModelOptions();
+                saveConfig();
+            });
+            el.model.addEventListener('change', () => {
+                state.model = el.model.value;
+                saveConfig();
+            });
+            
+            el.langToggle.addEventListener('change', () => {
+                state.targetLanguage = el.langToggle.checked ? 'FR' : 'EN';
+                el.langLabel.innerText = state.targetLanguage === 'FR' ? 'FR Output' : 'EN Output';
+                el.langLabel.style.color = state.targetLanguage === 'FR' ? 'var(--sap-blue)' : 'var(--color-success)';
+                
+                // Auto-switch default template option to match language toggle if they are using defaults
+                if (el.templateSelect.value === 'airbus-v0.2-fr' || el.templateSelect.value === 'airbus-v0.2-en') {
+                    el.templateSelect.value = state.targetLanguage === 'FR' ? 'airbus-v0.2-fr' : 'airbus-v0.2-en';
+                }
+                
+                updateTemplateText();
+                
+                showToast(`Output generation language set to ${state.targetLanguage === 'FR' ? 'French' : 'English'}.`, 'success');
+            });
+            
+            el.funcUploadZone.addEventListener('click', () => {
+                if (vscode) {
+                    vscode.postMessage({ command: 'selectFunctionalDoc' });
+                } else {
+                    el.funcFileInput.click();
+                }
+            });
+            el.funcFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) handleFuncFileUpload(e.target.files[0]);
+            });
+            setupDragDrop(el.funcUploadZone, handleFuncFileUpload);
+            
+            el.abapUploadZone.addEventListener('click', () => {
+                if (vscode) {
+                    vscode.postMessage({ command: 'selectAbapFiles' });
+                } else {
+                    el.abapFileInput.click();
+                }
+            });
+            el.abapFileInput.addEventListener('change', (e) => {
+                handleAbapFilesUpload(e.target.files);
+            });
+            setupDragDrop(el.abapUploadZone, null, (files) => handleAbapFilesUpload(files));
+            
+            el.templateSelect.addEventListener('change', () => {
+                if (el.templateSelect.value === 'upload') {
+                    if (vscode) {
+                        vscode.postMessage({ command: 'selectTemplateFile' });
+                    } else {
+                        el.templateFileInput.value = ''; // Reset file input to allow uploading same file
+                        el.templateFileInput.click();
+                    }
+                } else {
+                    updateTemplateText();
+                }
+            });
+            el.templateFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleTemplateFileUpload(e.target.files[0]);
+                } else {
+                    // Fallback to default template if upload cancelled and nothing is uploaded yet
+                    if (!state.uploadedTemplate) {
+                        resetTemplateToDefault();
+                    }
+                }
+            });
+            el.templateEditorRaw.addEventListener('input', () => {
+                state.currentTemplate = el.templateEditorRaw.value;
+            });
+            
+            el.btnRunAnalysis.addEventListener('click', runInputsAnalysis);
+            
+            el.btnChatSend.addEventListener('click', sendChatMessage);
+            el.chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') sendChatMessage();
+            });
+            
+            el.docMarkdownEditor.addEventListener('input', (e) => {
+                updatePreviewPane(e.target.value);
+            });
+            
+            el.tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    switchTab(tab.getAttribute('data-view'));
+                });
+            });
+            
+            el.btnGenerateSpec.addEventListener('click', generateTechnicalDocument);
+            el.btnCopyDoc.addEventListener('click', copyDocToClipboard);
+            el.btnDownloadMd.addEventListener('click', downloadMarkdownFile);
+            el.btnDownloadDocx.addEventListener('click', downloadWordDoc);
+            
+            el.btnCloseCodeModal.addEventListener('click', () => {
+                el.codeModal.style.display = 'none';
+                el.codeModalContent.innerText = '';
+            });
+            
+            // Fullscreen Toggle
+            const btnToggleFullscreen = document.getElementById('btn-toggle-fullscreen');
+            const exportPreviewPanel = document.getElementById('export-preview-panel');
+            const fullscreenBtnText = document.getElementById('fullscreen-btn-text');
+            const fullscreenIcon = btnToggleFullscreen.querySelector('i');
+            
+            btnToggleFullscreen.addEventListener('click', () => {
+                const isFullscreen = exportPreviewPanel.classList.toggle('fullscreen-panel');
+                if (isFullscreen) {
+                    fullscreenBtnText.innerText = 'Exit Fullscreen';
+                    fullscreenIcon.className = 'lucide-minimize-2';
+                } else {
+                    fullscreenBtnText.innerText = 'Fullscreen';
+                    fullscreenIcon.className = 'lucide-maximize-2';
+                }
+            });
+            
+            // GitLab Updates Card
+            document.getElementById('btn-save-update-config').addEventListener('click', () => {
+                saveConfig();
+                showToast('Update settings saved.', 'success');
+                checkForUpdates(false);
+            });
+            document.getElementById('btn-check-updates').addEventListener('click', () => {
+                checkForUpdates(false);
+            });
+            document.getElementById('btn-force-update').addEventListener('click', performUpdate);
+            
+            // Banner & Modal Actions
+            document.getElementById('btn-dismiss-update').addEventListener('click', () => {
+                document.getElementById('update-banner').style.display = 'none';
+            });
+            document.getElementById('btn-view-notes').addEventListener('click', () => {
+                if (state.updateAvailable) {
+                    document.getElementById('notes-version').innerText = `v${state.updateAvailable.version}`;
+                    document.getElementById('notes-content').innerText = state.updateAvailable.releaseNotes || 'No release notes provided.';
+                    document.getElementById('notes-modal').style.display = 'flex';
+                }
+            });
+            document.getElementById('btn-close-notes-modal').addEventListener('click', () => {
+                document.getElementById('notes-modal').style.display = 'none';
+            });
+            document.getElementById('btn-close-notes-ok').addEventListener('click', () => {
+                document.getElementById('notes-modal').style.display = 'none';
+            });
+            document.getElementById('btn-do-update').addEventListener('click', performUpdate);
+            
+            window.addEventListener('click', (e) => {
+                if (e.target === el.codeModal) {
+                    el.codeModal.style.display = 'none';
+                    el.codeModalContent.innerText = '';
+                }
+                if (e.target === document.getElementById('notes-modal')) {
+                    document.getElementById('notes-modal').style.display = 'none';
+                }
+            });
+
+            // VS Code Import Active Editor Code
+            const btnImportEditor = document.getElementById('btn-import-editor');
+            if (btnImportEditor) {
+                btnImportEditor.addEventListener('click', () => {
+                    if (vscode) {
+                        vscode.postMessage({
+                            command: 'importActiveEditor'
+                        });
+                    } else {
+                        showToast('Import from active editor is only supported inside VS Code.', 'warning');
+                    }
+                });
+            }
+        }
+
+        function setupDragDrop(zone, fileHandler, filesHandler) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                zone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    zone.classList.add('dragover');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                zone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    zone.classList.remove('dragover');
+                }, false);
+            });
+
+            zone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (filesHandler) {
+                    filesHandler(files);
+                } else if (fileHandler && files.length > 0) {
+                    fileHandler(files[0]);
+                }
+            }, false);
+        }
+    </script>
+</body>
+</html>

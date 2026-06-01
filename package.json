@@ -1,0 +1,54 @@
+{
+  "name": "abap-techspec-copilot",
+  "displayName": "ABAP TechSpec Copilot",
+  "description": "ABAP Technical Specification Generator using Airbus templates inside Copilot Chat.",
+  "version": "0.0.1",
+  "publisher": "soprasteria",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:abap-techspec-copilot.openGenerator"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "abap-techspec-copilot.openGenerator",
+        "title": "ABAP TechSpec: Open Webview Generator"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "abap-techspec-copilot.openGenerator",
+          "when": "resourceLangId == abap",
+          "group": "navigation"
+        }
+      ]
+    },
+    "chatParticipants": [
+      {
+        "id": "soprasteria.techspec",
+        "name": "techspec",
+        "description": "ABAP Technical Specification Generator using Airbus templates.",
+        "commands": [
+          {
+            "name": "generate",
+            "description": "Generate a detailed technical design document for the active ABAP code."
+          },
+          {
+            "name": "gaps",
+            "description": "Analyze the active code and identify functional or parameter gaps."
+          }
+        ]
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0"
+  }
+}
